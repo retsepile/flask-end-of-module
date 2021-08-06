@@ -1,10 +1,10 @@
 import hmac
 import sqlite3
-import datetime
 
 from flask import Flask, request, jsonify
-from flask_jwt import JWT, jwt_required, current_identity
+from flask_jwt import JWT, current_identity
 from flask_cors import CORS
+from flask_mail import Mail, Message
 
 
 class User(object):
@@ -15,6 +15,7 @@ class User(object):
         self.user_email = user_email
         self.phone_number = phone_number
         self.address = address
+
 
 # Initialisation of the users table
 
@@ -95,16 +96,27 @@ app = Flask(__name__)
 CORS(app)
 app.debug = True
 app.config['SECRET_KEY'] = 'super-secret'
-
 jwt = JWT(app, authenticate, identity)
+app.config['MAIL_SERVER'] = 'smtp.mailtrap.io'
+app.config['MAIL_PORT'] = 456
+app.config['MAIL_USERNAME'] = 'Retshepilekoloko27@gmail.com'
+app.config['MAIL_PASSWORD'] = 'retsepile2021'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+Mail = Mail(app)
 
 # when the user enters they details it will be protected from the third party
 
 
 @app.route('/protected')
-@jwt_required()
 def protected():
     return '%s' % current_identity
+
+
+@app.route('/login/', methods=['GET', 'POST'])
+def login():
+    response = {}
+    return response
 
 # creating a function for people who would want to register for an account
 
@@ -139,13 +151,17 @@ def new_member_registration():
             conn.commit()
             response["message"] = "success"
             response["status_code"] = 201
+
+            msg = Message('Hello from the other side', sender='Retshepilekoloko27@gmail.com',
+                          recipients=['Retshepilekoloko27@gmail.com'])
+            msg.body = "Hey Paul, sending you this email from my Flask app, lmk if it works"
+            Mail.send(msg)
         return response
 
 # will insert products that will be sold
 
 
 @app.route('/create-products/', methods=["POST"])
-@jwt_required()
 def create_products():
     response = {}
 
@@ -167,11 +183,12 @@ def create_products():
 # Creating products
 
 
-@app.route('/products/')
+@app.route('/all_products/')
 def display_products():
-    products = [{'id': 0, 'Product_name': 'Yocco speed point', 'Price': 300, 'Description': 'The best speed point'},
-                {'id': 1, 'Product_name': 'Yocco card machine', 'Price': 300, 'Description': 'Best card machine'},
-                {'id': 2, 'Product_name': 'samsung', 'Price': 300, 'Description': 'smartphone'}]
+    products = [{'id': 0, 'Product_name': 'Hoodie', 'Price': 500, 'Description': 'Look nice and warm this winter with this warm hoodies'},
+                {'id': 1, 'Product_name': 'Dress', 'Price': 300, 'Description': ' Lovely slit dress with buttons'},
+                {'id': 2, 'Product_name': 'Iphone', 'Price': 3000, 'Description': 'S'
+                                                                                  'martphone'}]
     return jsonify(products)
 
 # getting the point of sales product from products
@@ -194,7 +211,6 @@ def get_P_O_S():
 
 
 @app.route("/delete-products/<int:post_id>")
-@jwt_required()
 def delete_post(post_id):
     response = {}
     with sqlite3.connect("POS.db") as conn:
@@ -208,9 +224,10 @@ def delete_post(post_id):
 # modifying some of the product prices and adding new products
 
 
-@app.route('/edit-post/<int:post_id>/', methods=["PUT"])
-@jwt_required()
-def modify_post(post_id):
+# route to update products
+
+@app.route('/update_products/<int:post_id>/', methods=["PUT"])
+def modify_product(post_id):
     response = {}
 
     if request.method == "PUT":
@@ -218,23 +235,40 @@ def modify_post(post_id):
             incoming_data = dict(request.json)
             put_data = {}
 
-            if incoming_data.get("title") is not None:
-                put_data["title"] = incoming_data.get("title")
+        # updating product_name
+            if incoming_data.get("product_name") is not None:
+                put_data["product_name"] = incoming_data.get("product_name")
                 with sqlite3.connect('POS.db') as conn:
                     cursor = conn.cursor()
-                    cursor.execute("UPDATE post SET title =? WHERE id=?", (put_data["title"], post_id))
+                    cursor.execute("UPDATE user_products SET product_name =? WHERE id=?", (put_data["product_name"],
+                                                                                           post_id))
                     conn.commit()
-                    response['message'] = "Update was successfully"
+                    response['message'] = "product_name Updated successfully"
                     response['status_code'] = 200
-            if incoming_data.get("content") is not None:
-                put_data['content'] = incoming_data.get('content')
+
+        # updating price
+            if incoming_data.get("price") is not None:
+                put_data['price'] = incoming_data.get('price')
 
                 with sqlite3.connect('POS.db') as conn:
                     cursor = conn.cursor()
-                    cursor.execute("UPDATE post SET content =? WHERE id=?", (put_data["content"], post_id))
+                    cursor.execute("UPDATE user_products SET price =? WHERE id=?", (put_data["price"], post_id))
                     conn.commit()
 
-                    response["content"] = "Content updated successfully"
+                    response["price"] = "price updated successfully"
+                    response["status_code"] = 200
+
+        # updating description
+            if incoming_data.get("description") is not None:
+                put_data['description'] = incoming_data.get('description')
+
+                with sqlite3.connect('POS.db') as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE user_products SET description =? WHERE id=?", (put_data["description"],
+                                                                                          post_id))
+                    conn.commit()
+
+                    response["price"] = "description updated successfully"
                     response["status_code"] = 200
     return response
 
@@ -252,6 +286,13 @@ def get_post(post_id):
         response["data"] = cursor.fetchone()
 
     return jsonify(response)
+
+
+@app.route('/mailed/<string:email>', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        msg = Message('EMAIL ')
 
 
 if __name__ == '__main__':
