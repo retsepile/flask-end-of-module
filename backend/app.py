@@ -187,8 +187,7 @@ def create_products():
 def display_products():
     products = [{'id': 0, 'Product_name': 'Hoodie', 'Price': 500, 'Description': 'Look nice and warm this winter with this warm hoodies'},
                 {'id': 1, 'Product_name': 'Dress', 'Price': 300, 'Description': ' Lovely slit dress with buttons'},
-                {'id': 2, 'Product_name': 'Iphone', 'Price': 3000, 'Description': 'S'
-                                                                                  'martphone'}]
+                {'id': 2, 'Product_name': 'Iphone', 'Price': 3000, 'Description': 'Smartphone'}]
     return jsonify(products)
 
 # getting the point of sales product from products
